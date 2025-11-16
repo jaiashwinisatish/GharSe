@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import OrderFoodPage from './pages/OrderFoodPage';
 import EventsPage from './pages/EventsPage';
@@ -17,7 +16,13 @@ import LoginPage from './pages/LoginPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user && currentPage !== 'home') {
+      setCurrentPage('home');
+    }
+  }, [user, loading, currentPage]);
 
   if (loading) {
     return (
@@ -47,17 +52,31 @@ function App() {
       case 'become-chef':
         return <BecomeChefPage />;
       case 'customer-dashboard':
-        return (
-          <ProtectedRoute onNavigate={setCurrentPage}>
-            <CustomerDashboard />
-          </ProtectedRoute>
-        );
+        if (!user) {
+          setCurrentPage('home');
+          return null;
+        }
+        return <CustomerDashboard />;
       case 'cook-dashboard':
-        return (
-          <ProtectedRoute onNavigate={setCurrentPage} requiredRole="cook">
-            <CookDashboard />
-          </ProtectedRoute>
-        );
+        if (!user || profile?.role !== 'cook') {
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <div className="text-center max-w-md">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-6">
+                  You don't have permission to access the cook dashboard.
+                </p>
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all"
+                >
+                  Go to Home
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <CookDashboard />;
       case 'blog':
         return <BlogPage />;
       case 'about':
